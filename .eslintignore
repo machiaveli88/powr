@@ -1,0 +1,6 @@
+coverage/
+node_modules/
+!xnode_modules/cryo*
+node_modules/cryo*/node_modules/
+dist/
+test/
