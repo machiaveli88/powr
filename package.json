@@ -75,7 +75,7 @@
   },
   "peerDependencies": {
     "react": "^0.14.5",
-    "powr-utils": "^0.0.1"
+    "powr-utils": "^0.0.2"
   },
   "author": {
     "name": "Benjamin Kniffler",
