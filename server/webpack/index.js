@@ -1,4 +1,4 @@
-export default function (app) {
+module.exports =  function (app) {
    if (app.get('env') === 'development') {
       var webpack = require('webpack');
       var config = require("./webpack.debug.js")(app.config);

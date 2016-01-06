@@ -27,9 +27,10 @@ build/Release
 .idea
 _coverage_
 
-node_modules/*
-!node_modules/cryo-*/
-node_modules/cryo-*/node_modules
+node_modules
+
+# .npmignore - the files to not push to NPM
+src/
 
 server/sessions
 temp

@@ -26,10 +26,10 @@ build/Release
 # https://www.npmjs.org/doc/misc/npm-faq.html#should-i-check-my-node_modules-folder-into-git-
 .idea
 _coverage_
+node_modules
 
-node_modules/*
-!node_modules/cryo-*/
-node_modules/cryo-*/node_modules
+# .gitignore - the files to not push via git
+lib
 
 server/sessions
 temp

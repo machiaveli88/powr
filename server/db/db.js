@@ -1,7 +1,7 @@
 var Sequelize = require("sequelize");
-var log = require('cryo-utils/log')("db");
+var log = require('powr-utils/log')("db");
 
-export default function (app, config) {
+module.exports =  function (app, config) {
    var isEmbedded = !!config.storage;
    app.db = new Sequelize(config.db, config.username, config.password, {
       logging: config.log ? log : null,

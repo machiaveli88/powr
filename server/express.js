@@ -1,5 +1,6 @@
 // ExpressJs Server
-var log = require("cryo-utils/log")("app");
+var log = require("powr-utils/log")("app");
+var fs = require('fs');
 var path = require('path');
 var favicon = require('serve-favicon');
 var cookieParser = require('cookie-parser');
@@ -10,27 +11,40 @@ var deepMerge = require('deep-extend');
 var SequelizeStore = require('connect-sequelize')(session);
 var compression = require('compression')
 
-var app = require('express')();
-app.server = require('http').Server(app);
+module.exports = function(_config) {
+   var app = require('express')();
+   app.server = require('http').Server(app);
 
-export default function (_config) {
+   if(!_config) _config = {};
+
+   // Set ssr
+   if(app.get('env') === 'production'){
+      app.set('ssr', true);
+   }
+
+   // Parse config keys to app.get(key)
+   for(var key in _config){
+      app.set(key, _config);
+   }
+
+   // powr-dev installed?
+   if(app.get('env') === 'development' && !fs.existsSync(path.resolve('..', '..', 'powr-dev', 'package.json'))){
+      log('Please install powr-dev')
+   }
+
+   // Add socket-io if available
    if(_config.socketIO){
       app.io = require('socket.io')();
    }
 
    app.passport = passport;
-   require("cryo-utils/hook")(app);
-   require("./plugins/api-authorization")(app, _config);
+   require("./plugins/hook")(app);
+   require("./middlewares/api-authorization")(app, _config);
 
    var config = deepMerge(require('./config')(), _config);
    app.set('port', config.port);
 
    log("Preparing app");
-
-   // React View Engine
-   app.set('views', app.templates || config.templates);
-   app.set('view engine', 'jsx');
-   app.engine('jsx', require("./view-engine").createEngine());
 
    require("./db/db")(app, config.database);
 
@@ -43,12 +57,16 @@ export default function (_config) {
 
    app.bindMiddlewares = app.hook("bind:middlewares", function () {
       log("Binding Middlewares");
-      require("./webpack")(app);
+      // Load webpack if development & powr-dev available
+      if(app.get('env') === 'development' && fs.existsSync(path.resolve('..', '..', 'powr-dev', 'index.js'))){
+         log("Loading webpack");
+         require(path.resolve('..', '..', 'powr-dev', 'index.js'))(app);
+      }
       // Classic express middlewares
       app.use(cookieParser(config.secret));
       // app.use(require('connect-multiparty')());
-      if (DEBUG) {
-         var FileStore = require('session-file-store')(session);
+      if (DEBUG && fs.existsSync(path.resolve('..', '..', 'powr-dev', 'session-storage.js'))) {
+         var FileStore = require(path.resolve('..', '..', 'powr-dev', 'session-storage.js'))(session);
          app.use(session({
             secret: config.secret,
             resave: true,
@@ -75,28 +93,29 @@ export default function (_config) {
       app.use(bodyParser.json());
       app.use(bodyParser.urlencoded({extended: true}));
       app.use(compression());
-      app.use(favicon(path.resolve(ROOT, 'app', 'assets', 'favicon.ico')));
-      require("./plugins/api-token").init(app, config.secret);
-      if(config.recaptcha){
-         require("./plugins/recaptcha")(app, config.recaptcha);
+      var faviconPath = path.resolve(ROOT, 'app', 'assets', 'favicon.ico');
+      if(fs.existsSync(faviconPath)){
+         app.use(favicon(faviconPath));
       }
-      this.after();
-   });
+      require("./middlewares/api-token").init(app, config.secret);
+      if(config.recaptcha){
+         require("./middlewares/recaptcha")(app, config.recaptcha);
+      }
 
-   app.bindPlugins = app.hook("bind:plugins", function () {
-      log("Binding Plugins");
-      // Custom Plugins
-      require("./plugins/log")(app);
-      require("./plugins/access-control")(app);
-      require("./plugins/static-files")(app);
+      // More
+      require("./middlewares/log")(app);
+      require("./middlewares/access-control")(app);
+      require("./middlewares/static-files")(app);
       //require("./plugins/heroku-survive")(app, config.url);
       if(config.upload){
-         require("./plugins/upload")(app, config.upload);
+         require("./middlewares/upload")(app, config.upload);
       }
-      require("./plugins/api-cache")(app, config.cache);
-      require("./plugins/api-context")(app);
-      require("cryo-utils/sequelize/express-user")(app);
-
+      require("./middlewares/api-cache")(app, config.cache);
+      require("./middlewares/api-context")(app);
+      require("./plugins/sequelize/express-user")(app);
+      app.get('/__status', function(req, res, next){
+         res.json({status: 'ok'});
+      })
       this.after();
    });
 
@@ -104,8 +123,8 @@ export default function (_config) {
    app.bindApi = app.hook("bind:api", function () {
       log("Binding API");
       // API
-      require("./plugins/api-hack")(app);
-      require("./plugins/googlemaps")(app);
+      require("./middlewares/api-hack")(app);
+      require("./middlewares/googlemaps")(app);
       // require("./api-v1")(app, ["default", "v1"]);
 
       // Call after!
@@ -114,6 +133,15 @@ export default function (_config) {
 
    // Custom launch func
    app.launch = app.hook("launch", function () {
+      app.bindModels();
+      app.bindMiddlewares();
+      app.bindApi();
+
+      // React View Engine
+      app.set('views', app.config.templates||app.templates);
+      app.set('view engine', 'jsx');
+      app.engine('jsx', require("./view-engine").createEngine());
+
       log("Last bindings");
 
       if(app.io) {
@@ -122,17 +150,18 @@ export default function (_config) {
       }
 
       // Bind react/flux app to /**
-      require("./flux-app")(app);
+      require("../lib/server")(app);
 
       // Handle errors/not-found
-      require("./plugins/error-handler")(app);
+      require("./middlewares/error-handler")(app);
 
       log("Launching app");
       // Start server
-      var instance = app.server.listen(app.get("port"), function(){
-         app.emit('started');
+      app.server.listen(app.get("port"), function(){
+         setTimeout(function(){
+            app.emit('started');
+         }, 1000);
          log('The app is running at http://localhost:' + app.get('port') + " in " + app.get('env'));
-         //this.after();
       });
    });
 

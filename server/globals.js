@@ -1,7 +1,9 @@
 // Set globals and proces.env vars
+var path = require('path');
 
 module.exports = function (_globals, _env) {
    var globals = {
+      ROOT: path.resolve(__dirname, '..'),
       BROWSER: false,
       SERVER: true,
       STANDALONE: false,
@@ -17,22 +19,14 @@ module.exports = function (_globals, _env) {
       DEBUG_FD: 1
    }
 
-   if (!_globals) {
-      _globals = {};
-   }
-   if (!_env) {
-      _env = {};
-   }
-   for (var key in globals) {
-      global[key] = globals[key];
-   }
-   for (var key in _globals) {
-      global[key] = _globals[key];
-   }
-   for (var key in env) {
-      process.env[key] = env[key];
-   }
-   for (var key in _env) {
-      process.env[key] = _env[key];
+   copyTo(globals, global);
+   copyTo(_globals, global);
+   copyTo(env, process.env);
+   copyTo(_env, process.env);
+}
+function copyTo(source, target){
+   if(!source || !target) return;
+   for (var key in source) {
+      target[key] = source[key];
    }
 }
