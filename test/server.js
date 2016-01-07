@@ -10,7 +10,7 @@ describe('server basic functions', function() {
    before(function(done){
       this.timeout(15000);
       var powr = require('../index.js');
-      var config = require('./fixtures/config.js')({ROOT: __dirname});
+      var config = require('./fixtures/config.js')();
       app = powr.createApp(config);
       app.templates = path.resolve(__dirname, 'fixtures', 'templates');
       done();

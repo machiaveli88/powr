@@ -17,7 +17,7 @@ var porter = module.exports = {
    backup: function(sequelize, options){
       return new Promise(function(resolve, reject){
          var folders = sort(getDirectories(options.output));
-         var packageJson = require(ROOT + '/package.json')
+         var packageJson = require(path.resolve('..', '..', '..', '..', 'package.json'));
          var newVersion = folders.filter(function(i){return i.indexOf('v'+packageJson.version) === 0;}).length === 0;
          if(newVersion){
             log("NEW VERSION");

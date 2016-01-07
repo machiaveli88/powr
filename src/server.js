@@ -5,7 +5,7 @@ import React, {PropTypes, Component} from 'react';
 import path from 'path';
 import ReactDOM from 'react-dom/server';
 import {createStore, bindActionCreators, compose, combineReducers, applyMiddleware} from 'redux';
-import {CreateStore, ApiClient, RouteHookHandler, ReduxClientMiddleware} from './redux';
+import {ApiClient, RouteHookHandler, ReduxClientMiddleware} from './redux';
 import {syncReduxAndRouter, routeReducer, pushPath} from 'redux-simple-router'
 import {Router, Route, match, RouterContext} from 'react-router'
 
@@ -13,7 +13,7 @@ var DragDropContext = require('react-dnd').DragDropContext;
 var HTML5Backend = require('react-dnd-html5-backend');
 
 export default function (_app) {
-   var appPath = _app.config.entry || path.resolve(ROOT, 'app', 'app.js');
+   var appPath = _app.get('app');
    _app.get("/**", function (req, res, next) {
       function renderOnClient(){
          res.render('default', {
@@ -22,9 +22,10 @@ export default function (_app) {
          });
       };
       // if debug -> render on client
-      if (DEBUG && !_app.get('ssr')) { return renderOnClient(); }
+      if (DEBUG && !_app.get('ssr')) {
+         return renderOnClient();
+      }
       if(!appPath){
-         console.log('config.entry not defined');
          return renderOnClient();
       }
 

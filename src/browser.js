@@ -1,8 +1,9 @@
+require("babel-core/polyfill");
+
 import React, {PropTypes, Component} from 'react';
 import ReactDOM from 'react-dom';
 import {Provider} from 'react-redux';
-//import queryString from 'query-string';
-import {CreateStore, ApiClient, RouteHookHandler, ReduxClientMiddleware} from './redux';
+import {ApiClient, RouteHookHandler, ReduxClientMiddleware} from './redux';
 import {createStore, bindActionCreators, compose, combineReducers, applyMiddleware} from 'redux';
 var DragDropContext = require('react-dnd').DragDropContext;
 var HTML5Backend = require('react-dnd-html5-backend');
@@ -10,9 +11,7 @@ var HTML5Backend = require('react-dnd-html5-backend');
 import { syncReduxAndRouter, routeReducer, pushPath} from 'redux-simple-router'
 import { Router, Route, browserHistory, hashHistory} from 'react-router'
 
-import {createDevTools} from 'redux-devtools';
-import LogMonitor from 'redux-devtools-log-monitor';
-import DockMonitor from 'redux-devtools-dock-monitor';
+var devTools = require('powr-devtools');
 
 export default function (app) {
    var isElectron = typeof ELECTRON === 'object';
@@ -31,15 +30,13 @@ export default function (app) {
       routing: routeReducer
    });
 
-   var DevTools = createDevTools(
-      <DockMonitor toggleVisibilityKey="H" changePositionKey="Q" defaultIsVisible={false}>
-         <LogMonitor />
-      </DockMonitor>
-   );
+   var DevTools = devTools();
 
-   app.store = compose(
+   app.store = DevTools ? compose(
       applyMiddleware(ReduxClientMiddleware(app.apiClient)),
       DevTools.instrument()
+   )(createStore)(reducer, window.__data) : compose(
+      applyMiddleware(ReduxClientMiddleware(app.apiClient))
    )(createStore)(reducer, window.__data);
 
    for (var key in app.redux) {
@@ -72,7 +69,7 @@ export default function (app) {
       };
 
       render() {
-         if(DEBUG){
+         if(DevTools){
             return (
                <Provider store={app.store} key="provider">
                   <div className="full">

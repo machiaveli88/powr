@@ -1,5 +1,6 @@
 // ExpressJs Server
-var log = require("powr-utils/log")("app");
+var logger = require("powr-utils/log")
+var log = logger("app");
 var fs = require('fs');
 var path = require('path');
 var favicon = require('serve-favicon');
@@ -11,20 +12,26 @@ var deepMerge = require('deep-extend');
 var SequelizeStore = require('connect-sequelize')(session);
 var compression = require('compression')
 
-module.exports = function(_config) {
+module.exports = function(config) {
    var app = require('express')();
+   app.log = function(type, message){
+      if(!message){
+         message = type;
+         type = 'anonymous';
+      }
+      logger(type)(message);
+   };
+
    app.server = require('http').Server(app);
-
-   if(!_config) _config = {};
-
+   app.set('port', config.port);
    // Set ssr
    if(app.get('env') === 'production'){
       app.set('ssr', true);
    }
-
    // Parse config keys to app.get(key)
-   for(var key in _config){
-      app.set(key, _config);
+   app.set('config', config);
+   for(var key in config){
+      app.set(key, config[key]);
    }
 
    // powr-dev installed?
@@ -33,16 +40,13 @@ module.exports = function(_config) {
    }
 
    // Add socket-io if available
-   if(_config.socketIO){
+   if(config.socketIO){
       app.io = require('socket.io')();
    }
 
    app.passport = passport;
    require("./plugins/hook")(app);
-   require("./middlewares/api-authorization")(app, _config);
-
-   var config = deepMerge(require('./config')(), _config);
-   app.set('port', config.port);
+   require("./middlewares/api-authorization")(app, config);
 
    log("Preparing app");
 
@@ -53,47 +57,36 @@ module.exports = function(_config) {
       this.after();
    });
 
-   app.config = config;
-
    app.bindMiddlewares = app.hook("bind:middlewares", function () {
       log("Binding Middlewares");
       // Load webpack if development & powr-dev available
-      if(app.get('env') === 'development' && fs.existsSync(path.resolve('..', '..', 'powr-dev', 'index.js'))){
+      var webpackPath = path.resolve(app.get('root'), 'node_modules', 'powr-dev', 'webpack.js');
+      if(app.get('env') === 'development' && fs.existsSync(webpackPath)){
          log("Loading webpack");
-         require(path.resolve('..', '..', 'powr-dev', 'index.js'))(app);
+         require(webpackPath)(app);
       }
       // Classic express middlewares
       app.use(cookieParser(config.secret));
       // app.use(require('connect-multiparty')());
-      if (DEBUG && fs.existsSync(path.resolve('..', '..', 'powr-dev', 'session-storage.js'))) {
-         var FileStore = require(path.resolve('..', '..', 'powr-dev', 'session-storage.js'))(session);
-         app.use(session({
-            secret: config.secret,
-            resave: true,
-            maxAge: new Date(Date.now() + 3600000),
-            saveUninitialized: true,
-            store: new FileStore({
-               retries: 50,
-               path: path.resolve(ROOT, 'server', 'sessions')
-            })
-         }));
-      }
-      else {
-         app.use(session({
-            secret: config.secret,
-            maxAge: new Date(Date.now() + 3600000),
-            resave: true,
-            saveUninitialized: true,
-            store: new SequelizeStore(app.db),
-            proxy: true
-         }));
-      }
+
+      // sessions, if debug & powr-dev -> FileStore, else SequelizeStore
+      var store = DEBUG && fs.existsSync(path.resolve('..', '..', 'powr-dev', 'session-storage.js'))
+         ? require(path.resolve('..', '..', 'powr-dev', 'session-storage.js'))(session)
+         : new SequelizeStore(app.db);
+      app.use(session({
+         secret: config.secret,
+         maxAge: new Date(Date.now() + 3600000),
+         resave: true,
+         saveUninitialized: true,
+         store: store,
+         proxy: true
+      }));
       app.use(passport.initialize());
       app.use(passport.session());
       app.use(bodyParser.json());
       app.use(bodyParser.urlencoded({extended: true}));
       app.use(compression());
-      var faviconPath = path.resolve(ROOT, 'app', 'assets', 'favicon.ico');
+      var faviconPath = path.resolve(app.get('root'), 'app', 'assets', 'favicon.ico');
       if(fs.existsSync(faviconPath)){
          app.use(favicon(faviconPath));
       }
@@ -138,9 +131,9 @@ module.exports = function(_config) {
       app.bindApi();
 
       // React View Engine
-      app.set('views', app.config.templates||app.templates);
-      app.set('view engine', 'jsx');
-      app.engine('jsx', require("./view-engine").createEngine());
+      app.set('views', app.get('templates')||app.templates);
+      app.set('view engine', 'js');
+      app.engine('js', require("./view-engine").createEngine());
 
       log("Last bindings");
 

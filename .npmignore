@@ -24,4 +24,5 @@ build
 .eslintrc
 .eslintrc-strict
 .gitignore
+.gitattributes
 test/
