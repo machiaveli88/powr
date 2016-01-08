@@ -6,7 +6,13 @@ module.exports = function(config){
       throw new Error('No config, or no config.entry defined');
    }
 
-   var appPath = path.dirname(require.main.filename);
+   var appPath = path.dirname(config.app);
+
+   var packageJson = fs.existsSync(path.resolve(appPath, 'package.json'))
+      ? require(path.resolve(appPath, 'package.json'))
+      : require(path.resolve(appPath, '..', 'package.json'))
+
+   //var appPath = config.appPath || process.cwd() || path.dirname(require.main.filename);
    require("babel-core/register")({
       stage: 0,
       only: appPath,
@@ -17,8 +23,8 @@ module.exports = function(config){
    config = Object.assign({
       ssr: process.env.NODE_ENV === "production",
       root: appPath,
-      name: require(path.resolve(appPath, 'package.json')).name,
-      version: require(path.resolve(appPath, 'package.json')).version,
+      name: packageJson.name,
+      version: packageJson.version,
       templates: path.resolve(__dirname, '..', 'lib', 'templates'),
       log: process.env.DEBUG || "cryo*,app*,powr*",
       debug: process.env.NODE_ENV !== "production",

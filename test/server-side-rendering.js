@@ -12,7 +12,7 @@ describe('server side rendering', function() {
 
    before(function(done){
       this.timeout(15000);
-      var powr = require('../index.js');
+      var powr = require('../server.js');
       var config = require('./fixtures/config.js')();
       app = powr.createApp(config);
       app.set('ssr', true);

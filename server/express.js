@@ -61,7 +61,7 @@ module.exports = function(config) {
       log("Binding Middlewares");
       // Load webpack if development & powr-dev available
       var webpackPath = path.resolve(app.get('root'), 'node_modules', 'powr-dev', 'webpack.js');
-      if(app.get('env') === 'development' && fs.existsSync(webpackPath)){
+      if(app.get('env') === 'development' && app.get('webpack') !== false && fs.existsSync(webpackPath)){
          log("Loading webpack");
          require(webpackPath)(app);
       }

@@ -1,6 +1,6 @@
 {
   "name": "powr",
-  "version": "0.0.7",
+  "version": "0.0.9",
   "description": "powr framework",
   "scripts": {
     "test": "mocha",
