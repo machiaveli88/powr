@@ -1,5 +1,6 @@
 // Config values
 var path = require("path");
+var fs = require("fs");
 
 module.exports = function(config){
    if(!config || !config.app){
@@ -8,9 +9,11 @@ module.exports = function(config){
 
    var appPath = path.dirname(config.app);
 
-   var packageJson = fs.existsSync(path.resolve(appPath, 'package.json'))
-      ? require(path.resolve(appPath, 'package.json'))
-      : require(path.resolve(appPath, '..', 'package.json'))
+   var root = fs.existsSync(path.resolve(appPath, 'package.json'))
+      ? path.resolve(appPath)
+      : path.resolve(appPath, '..')
+
+   var packageJson = require(path.resolve(root, 'package.json'));
 
    //var appPath = config.appPath || process.cwd() || path.dirname(require.main.filename);
    require("babel-core/register")({
@@ -22,7 +25,8 @@ module.exports = function(config){
 
    config = Object.assign({
       ssr: process.env.NODE_ENV === "production",
-      root: appPath,
+      appPath: appPath,
+      root: root,
       name: packageJson.name,
       version: packageJson.version,
       templates: path.resolve(__dirname, '..', 'lib', 'templates'),
