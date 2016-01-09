@@ -1,6 +1,6 @@
 {
   "name": "powr",
-  "version": "0.0.10",
+  "version": "0.0.12",
   "description": "powr framework",
   "scripts": {
     "test": "mocha",
@@ -78,7 +78,7 @@
   "peerDependencies": {
     "react": "^0.14.5",
     "react-router": "^2.0.0-rc4",
-    "powr-utils": "^0.0.2"
+    "powr-utils": "^0.0.3"
   },
   "author": {
     "name": "Benjamin Kniffler",
